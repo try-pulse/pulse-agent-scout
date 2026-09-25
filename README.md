@@ -26,7 +26,7 @@ The six tests use a fake Pulse API and signed webhooks; they need no credentials
 
 ## What Scout demonstrates
 
-On a new agent session, Scout posts a thought, creates a plan, moves a backlog or todo issue into progress, reads context, and posts either a summary or an elicitation when the issue lacks a description. It handles follow-ups, Stop, permission changes, token revocation, and ended sessions. The default token store is a local JSON file: use durable shared storage for multiple replicas.
+On a new agent session, Scout posts a thought, creates a plan, moves a backlog or todo issue into progress, reads context, and posts either a summary or an elicitation when the issue lacks a description. It handles follow-ups, Stop, permission changes, token revocation, and ended sessions. The default token store writes local JSON; use durable shared storage for multiple replicas.
 
 ## SDK artifact
 
