@@ -22,6 +22,8 @@ To connect it to Pulse:
 3. Start Scout and open `<BASE_URL>/oauth/authorize?install_secret=<INSTALL_SECRET>` as a workspace admin.
 4. Delegate an issue to Scout or @mention it in an issue comment. Pulse opens an agent session and sends `AgentSessionEvent` / `created`; follow-ups and Stop arrive as `prompted`.
 
+Verify each webhook over the raw request body. Acknowledge the delivery within 5 seconds, post a first thought or external URL within 10 seconds of `created`, and after Stop post one final response or error within 60 seconds.
+
 The six tests use a fake Pulse API and signed webhooks; they need no credentials. For a slower local run, set `SCOUT_STEP_DELAY_MS=20000` and `SCOUT_HEARTBEAT_MS=15000`.
 
 ## What Scout demonstrates
