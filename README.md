@@ -18,9 +18,9 @@ Scout serves `GET /healthz`, `GET /oauth/authorize`, `GET /oauth/callback`, and 
 To connect it to Pulse:
 
 1. Set the redirect URI in `pulse-agent-app.json` to `<BASE_URL>/oauth/callback` and the webhook URL to `<BASE_URL>/webhook`.
-2. Register the manifest with `POST /api/v1/agent-apps`. Copy the returned client ID, client secret, and webhook secret into `.env`; the secrets are shown once.
+2. Register the manifest with `POST https://api.trypulse.tech/api/v1/agent-apps`, using a signed-in person's session token and `X-Workspace-ID`. An app token cannot register an app. Copy the returned client ID, client secret (`pulse_sk_…`), and webhook secret (`pwhsec_…`) into `.env`; the secrets are shown once.
 3. Start Scout and open `<BASE_URL>/oauth/authorize?install_secret=<INSTALL_SECRET>` as a workspace admin.
-4. Delegate an issue to Scout or mention it in an issue comment.
+4. Delegate an issue to Scout or @mention it in an issue comment. Pulse opens an agent session and sends `AgentSessionEvent` / `created`; follow-ups and Stop arrive as `prompted`.
 
 The six tests use a fake Pulse API and signed webhooks; they need no credentials. For a slower local run, set `SCOUT_STEP_DELAY_MS=20000` and `SCOUT_HEARTBEAT_MS=15000`.
 
