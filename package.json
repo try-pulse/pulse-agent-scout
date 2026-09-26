@@ -10,11 +10,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/src/main.js",
-    "test": "npm run build && node --test --test-reporter=spec 'dist/test/*.test.js'",
-    "sync:sdk": "node scripts/sync-sdk.mjs"
+    "test": "npm run build && node --test --test-reporter=spec 'dist/test/*.test.js'"
   },
   "dependencies": {
-    "@try-pulse/agent-sdk": "./vendor/try-pulse-agent-sdk-0.1.0.tgz"
+    "@try-pulse/agent-sdk": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
