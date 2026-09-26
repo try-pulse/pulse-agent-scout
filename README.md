@@ -1,6 +1,6 @@
 # Scout
 
-Scout is a deterministic sample Pulse agent. It responds to delegated issues and mentions without an LLM or an API key. This repository runs on its own with Node.js 22 or later. It installs `@pulse/agent-sdk` from the packed SDK artifact checked into `vendor/`; no SDK checkout is needed.
+Scout is a deterministic sample Pulse agent. It responds to delegated issues and mentions without an LLM or an API key. This repository runs on its own with Node.js 22 or later. It installs `@try-pulse/agent-sdk` from the packed SDK artifact checked into `vendor/`; no SDK checkout is needed.
 
 ## Run locally
 
@@ -32,10 +32,10 @@ On a new agent session, Scout posts a thought, creates a plan, moves a backlog o
 
 ## SDK artifact
 
-The dependency in `package.json` points at `vendor/pulse-agent-sdk-0.1.0.tgz`, built by `npm pack` from `pulse-agent-sdk/packages/sdk`. To refresh it after an SDK change, pack the SDK and run:
+The dependency in `package.json` points at `vendor/try-pulse-agent-sdk-0.1.0.tgz`, built by `npm pack` from `pulse-agent-sdk/packages/sdk`. To refresh it after an SDK change, pack the SDK and run:
 
 ```bash
-npm run sync:sdk -- /path/to/pulse-agent-sdk-0.1.0.tgz
+npm run sync:sdk -- /path/to/try-pulse-agent-sdk-0.1.0.tgz
 npm ci
 npm test
 ```

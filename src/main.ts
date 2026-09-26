@@ -8,7 +8,7 @@ import {
   SessionStops,
   TokenManager,
   createWebhookHandler,
-} from "@pulse/agent-sdk";
+} from "@try-pulse/agent-sdk";
 import { Scout } from "./scout.js";
 
 function env(name: string, fallback?: string): string {

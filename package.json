@@ -1,5 +1,5 @@
 {
-  "name": "@pulse/agent-scout",
+  "name": "@try-pulse/agent-scout",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
@@ -14,7 +14,7 @@
     "sync:sdk": "node scripts/sync-sdk.mjs"
   },
   "dependencies": {
-    "@pulse/agent-sdk": "./vendor/pulse-agent-sdk-0.1.0.tgz"
+    "@try-pulse/agent-sdk": "./vendor/try-pulse-agent-sdk-0.1.0.tgz"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

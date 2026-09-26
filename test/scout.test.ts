@@ -1,7 +1,7 @@
 // Scout against a fake Pulse: signed webhooks in, recorded API calls out. No network.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { MemoryTokenStore, SessionStops, TokenManager, createWebhookHandler, signWebhook } from "@pulse/agent-sdk";
+import { MemoryTokenStore, SessionStops, TokenManager, createWebhookHandler, signWebhook } from "@try-pulse/agent-sdk";
 import { Scout } from "../src/scout.js";
 
 const SECRET = "pwhsec_scout_test";

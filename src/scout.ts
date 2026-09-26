@@ -13,7 +13,7 @@ import {
   type PromptedContext,
   type SessionContext,
   type TokenManager,
-} from "@pulse/agent-sdk";
+} from "@try-pulse/agent-sdk";
 import { readPromptContext, type IssueContext } from "./context.js";
 
 export type ScoutOptions = {
