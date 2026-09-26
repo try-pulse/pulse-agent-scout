@@ -16,7 +16,7 @@
     "@try-pulse/agent-sdk": "^0.1.1"
   },
   "devDependencies": {
-    "@types/node": "^22.15.0",
+    "@types/node": "^26.6.2",
     "typescript": "^5.9.3"
   }
 }
