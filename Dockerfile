@@ -1,4 +1,4 @@
-FROM node:22-alpine AS build
+FROM node:22.23.4-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -7,7 +7,7 @@ COPY src ./src
 COPY test ./test
 RUN npm run build
 
-FROM node:22-alpine
+FROM node:22.23.4-alpine
 ENV NODE_ENV=production PORT=3000 TOKEN_FILE=/data/pulse-tokens.json
 WORKDIR /app
 COPY package.json package-lock.json ./
