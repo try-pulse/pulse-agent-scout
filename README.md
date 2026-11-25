@@ -5,7 +5,7 @@ A sample Pulse agent app that answers delegated issues and @mentions. Scout is d
 ## How it works
 
 1. `POST /webhook` receives signed `AgentSessionEvent` webhooks. The SDK verifies the signature over the raw body, answers `200` right away (Pulse requires a `2xx` within 5 seconds), and deduplicates deliveries.
-2. On `created`, Scout posts a thought within the 10-second window, creates a plan, moves a backlog or todo issue to in progress, reads the issue's context, and posts a summary. When the issue has no description, it asks for one with an elicitation instead.
+2. On `created`, Scout posts a thought within the 10-second window, creates a plan, reads the issue's context, and posts a summary. Delegating a backlog or todo issue moves it to in progress. For a comment mention, Scout leaves the issue's status alone. When the issue has no description, it asks for one with an elicitation instead.
 3. A `prompted` follow-up continues the same session. A Stop ends the run with one final response within 60 seconds. Scout also handles permission changes, token revocation and ended sessions.
 
 ## Prerequisites

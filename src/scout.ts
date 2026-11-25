@@ -34,7 +34,8 @@ type SessionState = {
   teamId?: string;
   label: string;
   running: boolean;
-  queue: AgentSessionPromptedEvent[];
+  queue: { event: AgentSessionPromptedEvent; signal: AbortSignal }[];
+  stopAcknowledgement?: Promise<void>;
   /** The select elicitation Scout is waiting on, if any. */
   awaitingSelect: boolean;
   created?: AgentSessionCreatedEvent;
@@ -89,8 +90,10 @@ export class Scout {
     const client = this.#client(state);
 
     // Instant feedback first: well inside the 10-second budget.
-    await client.thought(s.id, `Looking at ${state.label}…`);
-    await this.#run(s.id, state, signal, () => this.#investigate(client, event, state, signal));
+    await this.#run(s.id, state, signal, async () => {
+      await client.thought(s.id, `Looking at ${state.label}…`, { signal });
+      await this.#investigate(client, event, state, signal);
+    });
   }
 
   async #investigate(client: PulseAgentClient, event: AgentSessionCreatedEvent, state: SessionState, signal: AbortSignal) {
@@ -104,7 +107,7 @@ export class Scout {
     state.plan = plan;
     await client.setPlan(s.id, plan, { signal });
 
-    if (s.issue) await this.#moveToStarted(client, s.id, s.issue.id, signal);
+    if (s.issue && !s.comment) await this.#moveToStarted(client, s.id, s.issue.id, signal);
 
     await client.action(s.id, { action: "Reading", parameter: s.issue?.identifier ?? null }, { ephemeral: true, signal });
     await this.#step(signal);
@@ -148,7 +151,7 @@ export class Scout {
 
   async onPrompted(event: AgentSessionPromptedEvent, { isStop, signal }: PromptedContext): Promise<void> {
     const s = event.data.agent_session;
-    const state =
+    const state: SessionState =
       this.#sessions.get(s.id) ??
       ({
         installationId: event.installation_id,
@@ -166,13 +169,26 @@ export class Scout {
       // change nothing more, and post exactly one final activity — never with the aborted signal.
       state.queue = [];
       state.awaitingSelect = false;
-      await this.#final(() => client.respond(s.id, "Stopped. I made no further changes."));
+      const acknowledgement = this.#final(() => client.respond(s.id, "Stopped. I made no further changes."));
+      state.stopAcknowledgement = acknowledgement;
+      try {
+        await acknowledgement;
+      } finally {
+        if (state.stopAcknowledgement === acknowledgement) delete state.stopAcknowledgement;
+      }
       return;
     }
 
+    // Pulse can reopen the session while the final Stop response is in flight.
+    if (state.stopAcknowledgement) await state.stopAcknowledgement.catch(() => {});
+    if (signal.aborted) return;
     if (state.running) {
-      state.queue.push(event);
-      await client.thought(s.id, `Got it — I'll look at "${excerpt(event.data.agent_activity.content.body)}" after the current step.`);
+      state.queue.push({ event, signal });
+      try {
+        await client.thought(s.id, `Got it — I'll look at "${excerpt(event.data.agent_activity.content.body)}" after the current step.`, { signal });
+      } catch (err) {
+        if (!signal.aborted && !isSessionEnded(err)) throw err;
+      }
       return;
     }
     await this.#run(s.id, state, signal, () => this.#followUp(client, event, state, signal));
@@ -233,8 +249,8 @@ export class Scout {
       state.running = false;
     }
     const next = state.queue.shift();
-    if (next && !signal.aborted) {
-      await this.#run(sessionId, state, signal, () => this.#followUp(client, next, state, signal));
+    if (next && !next.signal.aborted) {
+      await this.#run(sessionId, state, next.signal, () => this.#followUp(client, next.event, state, next.signal));
     }
   }
 
@@ -247,7 +263,7 @@ export class Scout {
     }
     if (cause?.kind === "stop_signal") return; // onPrompted posts the final response
     this.#log("run failed", { sessionId, err: String(err) });
-    await this.#final(() => client.error(sessionId, `Scout could not finish: ${err instanceof Error ? err.message : String(err)}`));
+    await this.#final(() => client.error(sessionId, `Scout could not finish: ${err instanceof Error ? err.message : String(err)}`, { signal }));
   }
 
   async #final(post: () => Promise<unknown>) {

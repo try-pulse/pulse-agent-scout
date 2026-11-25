@@ -4,6 +4,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Build against the oldest supported Node major.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       pulse-sdk:
         patterns: ["@try-pulse/*"]

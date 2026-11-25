@@ -7,7 +7,18 @@ import { Scout } from "../src/scout.js";
 const SECRET = "pwhsec_scout_test";
 type Call = { method: string; path: string; body: any };
 
-function fakePulse(opts: { issueStatus?: string; endAfterFirstWrite?: boolean; stallPatch?: { nth: number; gate: Promise<void> } } = {}) {
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((r) => { resolve = r; });
+  return { promise, resolve };
+}
+
+function fakePulse(opts: {
+  issueStatus?: string;
+  endAfterFirstWrite?: boolean;
+  stallPatch?: { nth: number; gate: Promise<void> };
+  beforeReply?: (call: Call) => Promise<void>;
+} = {}) {
   const calls: Call[] = [];
   let writes = 0;
   let patches = 0;
@@ -19,6 +30,7 @@ function fakePulse(opts: { issueStatus?: string; endAfterFirstWrite?: boolean; s
     const body = typeof init.body === "string" ? JSON.parse(init.body) : undefined;
     const path = url.pathname.replace("/api/v1", "");
     calls.push({ method, path, body });
+    if (opts.beforeReply) await opts.beforeReply({ method, path, body });
     if (method !== "GET" && opts.endAfterFirstWrite && writes++ >= 1) {
       return reply(409, { code: "SESSION_ENDED", message: "ended", details: { end_reason: "uninstalled" } });
     }
@@ -92,10 +104,10 @@ const base = (type: string, action: string, data: unknown) => ({
   data,
 });
 
-const created = (description?: string) =>
+const created = (description?: string, comment: { id: string; body: string; url: string } | null = null) =>
   base("AgentSessionEvent", "created", {
     event_id: "ase_sess_1_created",
-    agent_session: agentSession,
+    agent_session: { ...agentSession, comment },
     previous_comments: [],
     guidance: [{ origin: "team", team_id: "t1", body: "Never touch billing." }],
     prompt_context: `<issue identifier="PUL-7" url="u"><title>Retry ignores Retry-After</title>${description ? `<description>${description}</description>` : ""}<team>Pulse</team><label>bug</label></issue><repository-hint repository="pulse/pulse-api"/>`,
@@ -110,6 +122,15 @@ const prompted = (id: string, body: string, signal?: "stop") =>
 
 const kinds = (calls: Call[]) =>
   calls.map((c) => (c.path.endsWith("/activities") && c.method === "POST" ? `activity:${c.body.content.type}${c.body.ephemeral ? "~" : ""}` : `${c.method} ${c.path}`));
+
+test("an issue-comment mention answers without changing the issue status", async () => {
+  const fake = fakePulse();
+  const { deliver, handler } = setup(fake);
+  deliver(created("Read this issue", { id: "c1", body: "@Scout can you summarize?", url: "https://example.com/c1" }));
+  await handler.idle();
+  assert.ok(kinds(fake.calls).includes("activity:response"));
+  assert.ok(!fake.calls.some((call) => call.path.startsWith("/issues/")));
+});
 
 test("created: thought first, plan, issue moved, actions, then select elicitation for an empty description", async () => {
   const fake = fakePulse();
@@ -196,6 +217,35 @@ test("409 SESSION_ENDED mid-run: Scout stops quietly and posts no error", async 
   const writes = fake.calls.filter((c) => c.method !== "GET");
   assert.equal(writes.length, 2, "the thought, then one refused write, then nothing");
   assert.ok(!writes.some((c) => c.body?.content?.type === "error"));
+});
+
+test("a newer prompt survives an earlier Stop while the old run is unwinding", { timeout: 3000 }, async () => {
+  const oldStarted = deferred();
+  const oldGate = deferred();
+  const stopStarted = deferred();
+  const stopGate = deferred();
+  const queued = deferred();
+  const fake = fakePulse({ beforeReply: async ({ method, body }) => {
+    if (method === "PATCH") { oldStarted.resolve(); await oldGate.promise; }
+    if (body?.content?.body?.startsWith("Stopped.")) { stopStarted.resolve(); await stopGate.promise; }
+    if (body?.content?.body?.startsWith("Got it")) queued.resolve();
+  } });
+  const { deliver, handler } = setup(fake);
+  deliver(created("Initial request"));
+  await oldStarted.promise;
+  deliver(prompted("stop", "Stop", "stop"));
+  await stopStarted.promise;
+  deliver({ ...prompted("reopened", "New question"), created_at: "2026-09-25T09:14:00Z" });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.ok(!fake.calls.some((c) => c.body?.content?.body?.startsWith("Got it")));
+  stopGate.resolve();
+  await queued.promise;
+  oldGate.resolve();
+  await handler.idle();
+  const responses = fake.calls.filter((c) => c.body?.content?.type === "response");
+  assert.equal(responses.length, 2);
+  assert.match(responses[0]!.body.content.body, /^Stopped/);
+  assert.match(responses[1]!.body.content.body, /New question/);
 });
 
 test("stop while a write is in flight (no step delay): still exactly one final activity", async () => {
